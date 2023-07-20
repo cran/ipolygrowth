@@ -1,0 +1,149 @@
+---
+title: "Using ipolygrowth for bacterial growth estimation"
+output: 
+  rmarkdown::html_vignette:
+    toc: true
+vignette: >
+  %\VignetteIndexEntry{Using ipolygrowth for bacterial growth estimation}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+
+
+## Introduction
+
+The `ipolygrowth` package calculates bacterial growth curve parameters using 4th degree polynomial functions. Polynomial growth curves are estimated from time series data from a single biological sample or multiple samples. Technical replicates within biological samples are allowed.    
+
+In this vignette, we will demonstrate examples with both single and multiple samples as input data. To use this package, we need to start with installing and loading the `ipolygrowth` package.  
+
+```{r setup, message=FALSE, warning=FALSE}
+# install.packages("ipolygrowth")
+library(ipolygrowth)
+library(dplyr)
+library(ggplot2)
+library(kableExtra) # for RMarkdown table output
+```
+
+
+### Example data
+
+We will use the bacterial growth data from the R package [growthrates](https://CRAN.R-project.org/package=growthrates) for demonstration. This data contains growth data of 3 bacteria strains and 12 antibiotics tetracycline concentration levels. Each strain-concentration combination has 2 replicates. In each replicate, the growth of bacteria is measured 31 times (i.e. 31 time points in the time series). For our demonstration, we consider each strain-concentration combination as a sample (i.e. a biological replicate) and each replicate as a technical replicate.  
+
+For more details about this data, see https://CRAN.R-project.org/package=growthrates.  
+
+Let's load the data and check its structure.  
+
+```{r}
+df.gr <- growthrates::bactgrowth
+str(df.gr)
+```
+
+We can also take a look at the first few rows of the data. 
+
+```{r}
+head(df.gr)
+```
+
+Let's plot the data. 
+
+```{r, fig.height=10, fig.width=13}
+ggplot()+
+  geom_point(data = df.gr, aes(x = time, y = value, color = factor(replicate)))+
+  facet_wrap(~ strain + conc)+
+  labs(color = "replicate")+
+  theme_bw()
+```
+
+
+### Requirement of data structure for ipolygrowth
+
+The `ipolygrowth` functions require the input data to be in long format with a time variable and a dependent variable (y) as the measure of growth in the input data. Both variables need to be numeric. Time points in the time series can be any length (uneven and different spacing allowed, even between technical replicates), as long as the time scale is measured uniformly (same units used) across all samples.  
+
+
+## When you have a single sample
+
+We will use the `ipg_singlesample()` function to calculate growth curve parameters for one sample. Since the `growthrates` data contains 36 strain-concentration combinations, we will use data from donor (D) with concentration 15.63, to represent two replicates from a single sample. We will take out the variables `strain` and `conc` from the data frame to avoid confusion.  
+
+```{r}
+df.singlesample <- df.gr %>% filter(strain == "D", conc == 15.63) %>% select(-strain, -conc)
+str(df.singlesample)
+table(df.singlesample$replicate, df.singlesample$time)
+```
+
+Now we specify the data frame name, time variable, and y variable in the `ipg_singlesample()` function and save the results. The output of `ipg_singlesample()` contains a table of calculated growth curve parameters, the polynomial model deriving the calculated parameters, a table of $\beta$ coefficients, and a table of fitted values with time. All components can be viewed by calling from the list output. Here, we show the table of calculated growth curve parameters.  
+
+```{r, results='asis'}
+out.singlesample <- ipg_singlesample(data = df.singlesample, time.name = "time", y.name = "value")
+
+out.singlesample$estimates %>%
+  kable %>% kable_styling("striped", full_width = F)  # table formatting for rmarkdown
+```
+
+\newline  
+
+We can use the fitted values and the original data to plot our results.  
+
+```{r, fig.height=3, fig.width=4}
+ggplot()+
+  geom_point(data = df.singlesample, aes(x = time, y = value, color = factor(replicate)))+ 
+  geom_line(data = out.singlesample$fitted, aes(x = time, y = fit))+ 
+  labs(color = "replicate")+
+  scale_x_continuous(n.breaks = 10)+
+  scale_y_continuous(n.breaks = 7)+
+  theme_bw()
+```
+
+
+### Altering epsilon for the maximum in y
+
+Notice the printed message "max y time is equal to the largest value of "time"" after `ipg_singlesample()` is called. This message appears when max y time is equal to the largest observed time point in the sample and when the search algorithm to identify max y time did not converge.  Usually, this indicates the growth curve did not reach an asymptote. If this message is printed, we recommend to plot the data from the sample to ensure the calculated max y time is appropriate for your data. 
+
+`epsilon` is a tuning parameter to change the threshold in the calculation of max y time. `epsilon` must be between 0 and 1, and a small value is recommended as it represents the convergence threshold as a fraction of the range of the dependent variable. The default value is 0.2%. The table below shows how the max y time is affected when `epsilon` is set to 1%. For this data, a reasonable value of `epsilon` is 1% as it corresponds to max growth at the end of the first growth phase.   
+
+```{r, results='asis'}
+out.singlesample2 <- ipg_singlesample(data = df.singlesample, time.name = "time", y.name = "value", epsilon = 1/100)
+out.singlesample2$estimates %>%
+  kable %>% kable_styling("striped", full_width = F)  # table formatting for rmarkdown
+```
+
+<br>  
+
+
+## When you have multiple samples  
+
+If you have multiple samples, `ipolygrowth` can calculate polynomial growth curve parameters for each sample. An ID variable must be included in the input data to uniquely identify each sample.  For our demonstration, we will create a new ID variable to represent multiple biological samples.  
+
+```{r}
+df.gr2 <- df.gr %>%  mutate(id = paste(strain, conc, sep = "-"))
+str(df.gr2)
+table(df.gr2$strain, df.gr2$conc)
+unique(df.gr2$id)
+```
+
+The input data for`ipg_multisample()` is the same long format data used for `ipg_singlesample()` with the addition of the ID variable.  `epsilon` is specified as a single value that will be applied across samples. It can also be input as a vector of values, one for each sample, thus allowing different thresholds for each sample.
+
+```{r, results='asis'}
+out.multi.f <- ipg_multisample(data = df.gr2, id = "id", time.name = "time", y.name = "value", epsilon = 0.2/100)
+out.multi.f$estimates %>%
+  kable() %>% kable_styling("striped", full_width = F) %>% scroll_box(width = "800px", height = "300px")  # table formatting for rmarkdown
+```
+
+We can use the same method to plot the fitted growth curves.  
+
+```{r , fig.height=10, fig.width=13}
+ggplot()+
+  geom_point(data = df.gr2, aes(x = time, y = value, color = factor(replicate)))+ 
+  geom_line(data = out.multi.f$fitted, aes(x = time, y = fit))+ 
+  facet_wrap(~ id)+
+  labs(color = "replicate")+
+  theme_bw()
+```
+
