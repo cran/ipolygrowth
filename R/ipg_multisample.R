@@ -63,8 +63,8 @@ ipg_multisample <- function(data, id, time.name, y.name, epsilon = 0.2/100) {
     dplyr::distinct() %>%
     dplyr::group_by(dplyr::across(tidyselect::all_of(id))) %>%
     dplyr::summarise(n = dplyr::n(), .groups = "drop_last")
-    duptimes <- duptimes$n                                                                          # get duplicated times for each data subset
-    df.factor2 <- df.factor %>% dplyr::slice(rep(1:nrow(.), duptimes))                              # duplicate id for fitted value
+  duptimes <- duptimes$n                                                                            # get duplicated times for each data subset
+  df.factor2 <- df.factor %>% dplyr::slice(rep(1:nrow(.), duptimes))                                # duplicate id for fitted value
 
   for (i in 1:length(ls.df)) {
     tryCatch(
@@ -73,7 +73,7 @@ ipg_multisample <- function(data, id, time.name, y.name, epsilon = 0.2/100) {
         X <<- X+1
       },
       finally = {
-        temp <- suppressMessages(ipg_singlesample(ls.df[[i]], time.name, y.name, epsilon[i]))  # requires a vector of threshold
+        temp <- suppressMessages(ipg_singlesample(ls.df[[i]], time.name, y.name, epsilon[i]))       # requires a vector of threshold
         ls.model[[i]] <- temp$model
         output.estimates[i, ] <- temp$estimates
         output.betas[i, ] <- temp$betas

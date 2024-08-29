@@ -25,12 +25,14 @@ The `ipolygrowth` package calculates bacterial growth curve parameters using 4th
 In this vignette, we will demonstrate examples with both single and multiple samples as input data. To use this package, we need to start with installing and loading the `ipolygrowth` package.  
 
 ```{r setup, message=FALSE, warning=FALSE}
-# install.packages("ipolygrowth")
+# install.packages(c("ipolygrowth", "dplyr", "ggplot2"))
 library(ipolygrowth)
 library(dplyr)
 library(ggplot2)
 library(kableExtra) # for RMarkdown table output
 ```
+
+Expected outputs are shown in the rendered version of the [vignette] (https://CRAN.R-project.org/package=ipolygrowth) on CRAN.  
 
 
 ### Example data
@@ -39,10 +41,15 @@ We will use the bacterial growth data from the R package [growthrates](https://C
 
 For more details about this data, see https://CRAN.R-project.org/package=growthrates.  
 
-Let's load the data and check its structure.  
+The `bactgrowth.txt` can be loaded from the `growthrates` package directly or be downloaded from [here](https://github.com/tpetzoldt/growthrates/tree/master/data) and read in via `read.table()`. Let's load the data and check its structure.  
 
 ```{r}
+if (!"growthrates" %in% installed.packages()) {install.packages("growthrates")}
 df.gr <- growthrates::bactgrowth
+# Download the `bactgrowth.txt` to the directory of your script. Then run:
+# data <- read.table("bactgrowth.txt", header = TRUE) %>%
+  # mutate(strain = factor(strain, levels = c("D", "R", "T")))
+
 str(df.gr)
 ```
 

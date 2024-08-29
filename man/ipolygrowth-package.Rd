@@ -25,11 +25,11 @@ Useful links:
 
 }
 \author{
-\strong{Maintainer}: Jifan Wang \email{jifan.wang@tufts.edu} (\href{https://orcid.org/0000-0001-9720-8913}{ORCID})
+\strong{Maintainer}: Jifan Wang \email{wjifan@hotmail.com} (\href{https://orcid.org/0000-0001-9720-8913}{ORCID}) [copyright holder]
 
 Authors:
 \itemize{
-  \item Kathryn Barger
+  \item Kathryn Barger \email{kathrynjbarger@gmail.com} [copyright holder]
 }
 
 }

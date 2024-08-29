@@ -27,23 +27,42 @@ devtools::install_github("https://github.com/kivanvan/ipolygrowth", upgrade = F,
 
 ## Example
 
-The example data comes from the
-[growthrates](https://CRAN.R-project.org/package=growthrates) package.  
-This is a basic example which shows you how to use the single sample
-function:
+Load the packages first.
 
 ``` r
 library(ipolygrowth)
 library(dplyr)
+```
 
+The example data comes from the
+[growthrates](https://CRAN.R-project.org/package=growthrates) package.
+
+``` r
 # example data comes from the growthrates package (available on CRAN)
+if (!"growthrates" %in% installed.packages()) {install.packages("growthrates")}
 data <- growthrates::bactgrowth
+```
 
+Alternatively, download the `bactgrowth.txt` from
+[here](https://github.com/tpetzoldt/growthrates/tree/master/data) to the
+directory of your script. The data can then be read using the following
+code.
+
+``` r
+data <- read.table("bactgrowth.txt", header = TRUE) %>%
+  mutate(strain = factor(strain, levels = c("D", "R", "T")))
+```
+
+This is a basic example which shows you how to use the single sample
+function:
+
+``` r
 # subset data to a single biological sample
 df.singlesample <- data %>% dplyr::filter(strain == "D", conc == 0)
 
 # calculate growth curve parameters using ipolygrowth function
 out.singlesample <- ipg_singlesample(data = df.singlesample, time.name = "time", y.name = "value")
+#> max y time is equal to the largest value of "time"
 ```
 
 The output is a list, including a table of growth parameter estimates,
@@ -60,4 +79,6 @@ out.singlesample$estimates
 #> 1         30
 ```
 
-For more instructions, please refer to the vignette.
+For more instructions and the expected output of vignette, please refer
+to the [vignette on
+CRAN](https://CRAN.R-project.org/package=ipolygrowth).
